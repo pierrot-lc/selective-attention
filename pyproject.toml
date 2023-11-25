@@ -1,0 +1,19 @@
+[project]
+name = ""
+version = ""
+description = ""
+authors = [
+    {name = "Pierrot LC", email = "pstmrtem@outlook.com"},
+]
+dependencies = [
+    "torch>=2.1.1",
+    "torchtext>=0.16.1",
+    "pandas>=2.1.3",
+    "spacy>=3.7.2",
+    "positional-encodings[pytorch]>=6.0.1",
+    "einops>=0.7.0",
+]
+requires-python = ">=3.11"
+readme = "README.md"
+license = {text = "MIT"}
+
