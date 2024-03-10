@@ -1,6 +1,10 @@
+from einops import rearrange
 import torch
 import torch.nn as nn
 from positional_encodings.torch_encodings import PositionalEncoding1D
+
+from .decoder import TransformerDecoder
+from .encoder import TransformerEncoder
 
 
 class TranslationModel(nn.Module):
@@ -32,15 +36,13 @@ class TranslationModel(nn.Module):
 
         self.pos_encodings = PositionalEncoding1D(d_model)
 
-        self.transformer = nn.Transformer(
-            d_model,
-            nhead,
-            num_encoder_layers,
-            num_decoder_layers,
-            dim_feedforward,
-            dropout,
-            batch_first=True,
+        self.encoder = TransformerEncoder(
+            d_model, nhead, dim_feedforward, dropout, num_encoder_layers
         )
+        self.decoder = TransformerDecoder(
+            d_model, nhead, dim_feedforward, dropout, num_decoder_layers
+        )
+
         self.head = nn.Linear(d_model, tgt_vocab_size)
 
     def forward(
@@ -56,6 +58,12 @@ class TranslationModel(nn.Module):
             tgt.shape[1], device=tgt.device
         )
 
-        tgt = self.transformer(src, tgt, tgt_mask=tgt_mask, tgt_is_causal=True)
+        src = rearrange(src, "n s d -> s n d")
+        tgt = rearrange(tgt, "n t d -> t n d")
+
+        memory = self.encoder(src)
+        tgt = self.decoder(tgt, memory, tgt_mask=tgt_mask)
+
+        tgt = rearrange(tgt, "t n d -> n t d")
 
         return self.head(tgt)

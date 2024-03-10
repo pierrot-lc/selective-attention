@@ -17,14 +17,20 @@ class Trainer:
         self.optimizer = optimizer
 
         self.loss = nn.CrossEntropyLoss()
+        self.device = "cuda"
 
     def launch_training(self):
-        self.model.to("cuda")
+        self.model.to(self.device)
 
         for src, tgt in self.dataloader:
-            src, tgt = src.to("cuda"), tgt.to("cuda")
+            src, tgt = src.to(self.device), tgt.to(self.device)
 
             tgt_pred = self.model(src, tgt)
+
+            # Shift the tokens to predicts by one, so that
+            # we do not predict the present.
+            tgt = tgt[:, 1:]
+            tgt_pred = tgt_pred[:, :-1]
 
             tgt = rearrange(tgt, "b l -> (b l)")
             tgt_pred = rearrange(tgt_pred, "b l v -> (b l) v")

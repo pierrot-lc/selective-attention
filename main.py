@@ -32,6 +32,7 @@ def main():
             src_pad_idx=dataset.french_vocab["<pad>"],
             tgt_pad_idx=dataset.english_vocab["<pad>"],
         ),
+        shuffle=True,
     )
 
     optimizer = optim.AdamW(model.parameters(), lr=3e-4)

@@ -13,7 +13,38 @@ class TransformerEncoder(nn.Module):
     ):
         super().__init__()
 
-        self.encoder = nn.TransformerEncoder(
-            nn.TransformerEncoderLayer(d_model, nhead, dim_feedforward, dropout),
-            num_layers=num_layers,
+        self.mlps = nn.ModuleList(
+            [
+                nn.Sequential(
+                    nn.Linear(d_model, d_model),
+                    nn.ReLU(),
+                    nn.Linear(d_model, d_model),
+                )
+                for _ in range(num_layers)
+            ]
         )
+
+        self.self_attentions = nn.ModuleList(
+            [
+                nn.MultiheadAttention(d_model, nhead, dropout=dropout)
+                for _ in range(num_layers)
+            ]
+        )
+
+        self.norms = nn.ModuleList(
+            [nn.LayerNorm(d_model, bias=False) for _ in range(num_layers)]
+        )
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        for mlp, self_attention, norm in zip(
+            self.mlps, self.self_attentions, self.norms
+        ):
+            x_attn = norm(x)
+            x_attn, _ = self_attention(x_attn, x_attn, x_attn)
+            x = x + x_attn
+
+            x_mlp = norm(x)
+            x_mlp = mlp(x_mlp)
+            x = x + x_mlp
+
+        return x
