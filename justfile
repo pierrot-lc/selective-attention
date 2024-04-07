@@ -1,14 +1,11 @@
-download_data:
-    wget http://www.manythings.org/anki/fra-eng.zip
-    unzip fra-eng.zip
-    rm fra-eng.zip
-    mkdir -p data/fra-eng
-    mv fra.txt data/fra-eng/fra-eng.txt
-    mv _about.txt data/fra-eng/about.txt
+plateform:
+  TF_CPP_MIN_LOG_LEVEL=0 python -c "from jax.lib import xla_bridge; print(xla_bridge.get_backend().platform)"
 
-spacy:
-    python3 -m spacy download en_core_web_sm
-    python3 -m spacy download fr_core_news_sm
+data:
+  mkdir -p data
 
-cuda:
-    python3 -c "import torch; print(torch.cuda.is_available())"
+shakespear: data
+  kaggle datasets download -d kingburrito666/shakespeare-plays
+  unzip shakespeare-plays.zip
+  mv alllines.txt data/shakespear.txt
+  rm ./shakespeare-plays.zip ./Shakespeare_data.csv ./william-shakespeare-black-silhouette.jpg

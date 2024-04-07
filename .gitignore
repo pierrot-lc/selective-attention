@@ -1,5 +1,4 @@
 **/__pycache__
 .pdm-python
-pdm.lock
 .venv
 data/
