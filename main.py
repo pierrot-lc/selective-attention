@@ -1,46 +1,21 @@
-from functools import partial
+from pathlib import Path
 
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader
+import jax
 
-from src.dataset import TranslationDataset
-from src.model import TranslationModel
-from src.trainer import Trainer
+from src.datasets import ShakespearDataset
+from src.model.decoder_only import DecoderOnlyTransformer
 
 
 def main():
-    dataset = TranslationDataset.from_file("./data/fra-eng/fra-eng.txt")
-    model = TranslationModel(
-        len(dataset.french_vocab),
-        len(dataset.english_vocab),
-        dataset.french_vocab["<pad>"],
-        dataset.english_vocab["<pad>"],
-        92,
-        nhead=2,
-        num_encoder_layers=3,
-        num_decoder_layers=3,
-        dim_feedforward=92 * 4,
-        dropout=0.05,
+    dataset = ShakespearDataset.from_file(Path("./data/shakespear.txt"), 10)
+    tokens = dataset[0]
+    key = jax.random.key(42)
+
+    model = DecoderOnlyTransformer(
+        dataset.vocab_size, 32, 2, 3, dataset.vocab_size, key
     )
-
-    dataloader = DataLoader(
-        dataset,
-        batch_size=64,
-        collate_fn=partial(
-            dataset.collate_fn,
-            src_pad_idx=dataset.french_vocab["<pad>"],
-            tgt_pad_idx=dataset.english_vocab["<pad>"],
-        ),
-        shuffle=True,
-    )
-
-    optimizer = optim.AdamW(model.parameters(), lr=3e-4)
-
-    trainer = Trainer(model, dataloader, optimizer)
-
-    trainer.launch_training()
-
+    out = model(tokens)
+    print(out.shape)
 
 if __name__ == "__main__":
     main()

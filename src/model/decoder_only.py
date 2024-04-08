@@ -38,16 +38,16 @@ class DecoderOnlyLayer(eqx.Module):
         self, x: Float[Array, "seq_len d_model"], mask: Bool[Array, "seq_len seq_len"]
     ) -> Float[Array, "seq_len d_model"]:
         x_att = self.mha(x, x, x, mask)
-        x = self.norm_1(x + x_att)
+        x = jax.vmap(self.norm_1)(x + x_att)
 
-        x_ffn = self.ffn(x)
-        x = self.norm_2(x + x_ffn)
+        x_ffn = jax.vmap(self.ffn)(x)
+        x = jax.vmap(self.norm_2)(x + x_ffn)
 
         return x
 
 
 class DecoderOnlyTransformer(eqx.Module):
-    layers: nn.Sequential[nn.DecoderOnlyLayer]
+    layers: nn.Sequential
     embedding: nn.Embedding
     logits: nn.Linear
 
@@ -75,14 +75,14 @@ class DecoderOnlyTransformer(eqx.Module):
     @eqx.filter_jit
     @jaxtyped(typechecker=beartype)
     def __call__(self, x: Int[Array, "seq_len"]) -> Float[Array, "seq_len d_model"]:
-        mask = jnp.eye(x.shape[0], dtype=jnp.int)
+        mask = jnp.eye(x.shape[0], dtype=int)
         mask = jnp.cumsum(mask, axis=1).T
-        mask = mask.astype(jnp.bool)
+        mask = mask.astype(bool)
 
         x = jax.vmap(self.embedding)(x)
 
         for decoder_layer in self.layers:
             x = decoder_layer(x, mask)
 
-        x = self.logits(x)
+        x = jax.vmap(self.logits)(x)
         return x

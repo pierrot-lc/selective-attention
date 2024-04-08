@@ -7,5 +7,5 @@ data:
 shakespear: data
   kaggle datasets download -d kingburrito666/shakespeare-plays
   unzip shakespeare-plays.zip
-  mv alllines.txt data/shakespear.txt
-  rm ./shakespeare-plays.zip ./Shakespeare_data.csv ./william-shakespeare-black-silhouette.jpg
+  cat alllines.txt | sed 's/^"//' | sed 's/"$//' > data/shakespear.txt
+  rm ./shakespeare-plays.zip ./Shakespeare_data.csv ./william-shakespeare-black-silhouette.jpg ./alllines.txt
