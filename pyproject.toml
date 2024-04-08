@@ -6,11 +6,12 @@ authors = [
     {name = "Pierrot LC", email = "pierrotlc@proton.me"},
 ]
 dependencies = [
-    "jax[cpu]>=0.4.26",
-    "equinox>=0.11.3",
-    "optax>=0.2.2",
-    "jaxtyping>=0.2.28",
     "beartype>=0.18.2",
+    "equinox>=0.11.3",
+    "jax[cpu]>=0.4.26",
+    "jaxtyping>=0.2.28",
+    "optax>=0.2.2",
+    "tqdm>=4.66.2",
 ]
 requires-python = ">=3.12"
 readme = "README.md"
