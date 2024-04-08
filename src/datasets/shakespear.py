@@ -2,6 +2,7 @@ from collections import Counter
 from pathlib import Path
 
 import equinox as eqx
+import jax
 import jax.numpy as jnp
 from beartype import beartype
 from jaxtyping import Array, Int, jaxtyped
@@ -28,7 +29,7 @@ class ShakespearDataset(eqx.Module):
         self.encoded_text = jnp.array(encoded_text)
 
     @jaxtyped(typechecker=beartype)
-    def __getitem__(self, i: int) -> Int[Array, "seq_len"]:
+    def __getitem__(self, i: Int[Array, ""]) -> Int[Array, "seq_len"]:
         tokens = self.encoded_text[i : i + self.seq_len]
         return tokens
 

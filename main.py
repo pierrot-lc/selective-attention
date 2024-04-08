@@ -1,21 +1,24 @@
 from pathlib import Path
 
 import jax
+import jax.random as random
 
 from src.datasets import ShakespearDataset
-from src.model.decoder_only import DecoderOnlyTransformer
+from src.model import DecoderOnlyTransformer
+import src.trainer as trainer
 
 
 def main():
     dataset = ShakespearDataset.from_file(Path("./data/shakespear.txt"), 10)
-    tokens = dataset[0]
-    key = jax.random.key(42)
+    key = random.key(42)
+    batch_size = 2
 
+    key, sk = random.split(key)
     model = DecoderOnlyTransformer(
-        dataset.vocab_size, 32, 2, 3, dataset.vocab_size, key
+        dataset.vocab_size, 32, 2, 3, dataset.vocab_size, sk
     )
-    out = model(tokens)
-    print(out.shape)
+
+    trainer.train(model, dataset, batch_size, key)
 
 if __name__ == "__main__":
     main()

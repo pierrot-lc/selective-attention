@@ -35,7 +35,9 @@ class DecoderOnlyLayer(eqx.Module):
     @eqx.filter_jit
     @jaxtyped(typechecker=beartype)
     def __call__(
-        self, x: Float[Array, "seq_len d_model"], mask: Bool[Array, "seq_len seq_len"]
+        self,
+        x: Float[Array, "seq_len d_model"],
+        mask: Bool[Array, "seq_len seq_len"],
     ) -> Float[Array, "seq_len d_model"]:
         x_att = self.mha(x, x, x, mask)
         x = jax.vmap(self.norm_1)(x + x_att)
