@@ -2,7 +2,6 @@ from collections import Counter
 from pathlib import Path
 
 import equinox as eqx
-import jax
 import jax.numpy as jnp
 from beartype import beartype
 from jaxtyping import Array, Int, jaxtyped

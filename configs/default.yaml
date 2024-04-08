@@ -1,0 +1,17 @@
+---
+model:
+  d_model: 32
+  num_heads: 2
+  num_layers: 3
+
+dataset:
+  seq_len: 10
+
+trainer:
+  batch_size: 64
+  n_training_iter: 10000
+  n_eval_iter: 10
+
+hydra:
+  job:
+    chdir: true
