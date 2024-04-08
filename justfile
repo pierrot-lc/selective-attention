@@ -9,3 +9,6 @@ shakespear: data
   unzip shakespeare-plays.zip
   cat alllines.txt | sed 's/^"//' | sed 's/"$//' > data/shakespear.txt
   rm ./shakespeare-plays.zip ./Shakespeare_data.csv ./william-shakespeare-black-silhouette.jpg ./alllines.txt
+
+labml-app:
+    labml app-server --port 8001

@@ -9,6 +9,7 @@ import jax.random as random
 import optax
 from beartype import beartype
 from jaxtyping import Array, Float, Int, jaxtyped
+from labml import tracker
 from optax.losses import softmax_cross_entropy_with_integer_labels
 from tqdm import tqdm
 
@@ -110,15 +111,15 @@ def train(
     optimizer = optax.adamw(1e-4)
     opt_state = optimizer.init(params)
 
+    n_params = count_params(model)
+    print(f"Number of parameters: {n_params:,}")
+
     key, sk = random.split(key)
     dataloader = tqdm(
         loader(dataset, batch_size, n_iters, sk),
         desc="Training",
         total=n_iters,
     )
-
-    n_params = count_params(model)
-    print(f"Number of parameters: {n_params:,}")
 
     for iter_id, batch in enumerate(dataloader):
         grads = grad_fn(params, static, batch)
@@ -129,4 +130,5 @@ def train(
             key, sk = random.split(key)
             model = eqx.combine(params, static)
             metrics = eval(model, dataset, batch_size, 10, key)
-            print(metrics)
+            metrics = jax.tree_util.tree_map(float, metrics)
+            tracker.save(iter_id, metrics)

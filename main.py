@@ -3,12 +3,14 @@ import jax.random as random
 import src.trainer as trainer
 from configs.template import (
     DecoderOnlyTransformerConfig,
+    LabMLConfig,
     MainConfig,
     ShakespearDatasetConfig,
     TrainerConfig,
 )
 from hydra.core.config_store import ConfigStore
-from omegaconf import DictConfig
+from labml import experiment
+from omegaconf import DictConfig, OmegaConf
 from src.datasets import ShakespearDataset
 from src.model import DecoderOnlyTransformer
 
@@ -17,11 +19,12 @@ cs.store(name="main-config", node=MainConfig)
 
 
 @hydra.main(config_path="configs", config_name="default", version_base="1.1")
-def main(config: DictConfig):
+def main(dict_config: DictConfig):
     config = MainConfig(
-        dataset=ShakespearDatasetConfig(**config.dataset),
-        model=DecoderOnlyTransformerConfig(**config.model),
-        trainer=TrainerConfig(**config.trainer),
+        dataset=ShakespearDatasetConfig(**dict_config.dataset),
+        model=DecoderOnlyTransformerConfig(**dict_config.model),
+        trainer=TrainerConfig(**dict_config.trainer),
+        labml=LabMLConfig(**dict_config.labml),
     )
     dataset = ShakespearDataset.from_file(
         config.dataset.filepath, config.dataset.seq_len
@@ -38,13 +41,18 @@ def main(config: DictConfig):
         sk,
     )
 
-    trainer.train(
-        model,
-        dataset,
-        config.trainer.n_training_iter,
-        config.trainer.batch_size,
-        key,
-    )
+    with experiment.record(
+        name="test",
+        exp_conf=OmegaConf.to_container(dict_config),
+        app_url=config.labml.app_url,
+    ):
+        trainer.train(
+            model,
+            dataset,
+            config.trainer.n_training_iter,
+            config.trainer.batch_size,
+            key,
+        )
 
 
 if __name__ == "__main__":

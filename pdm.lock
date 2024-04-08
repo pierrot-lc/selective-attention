@@ -5,7 +5,7 @@
 groups = ["default"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:370a3350c41395068d1805875c547e92a87681199ce4e898cf6512a41ab9901d"
+content_hash = "sha256:3d883b08aac0db0487cb43647935687f493004956db050faedbd3220221f9c62"
 
 [[package]]
 name = "absl-py"
@@ -84,6 +84,34 @@ dependencies = [
 files = [
     {file = "equinox-0.11.3-py3-none-any.whl", hash = "sha256:04cf3faaf2b977ff1f7f89b7bf69c4e825d084c0bf59c6ccc19adba320d4b4a1"},
     {file = "equinox-0.11.3.tar.gz", hash = "sha256:a1273cc28c60d3131ac596f8a0f5c7dd384729e6cddae86e7be05f026880e8e0"},
+]
+
+[[package]]
+name = "gitdb"
+version = "4.0.11"
+requires_python = ">=3.7"
+summary = "Git Object Database"
+groups = ["default"]
+dependencies = [
+    "smmap<6,>=3.0.1",
+]
+files = [
+    {file = "gitdb-4.0.11-py3-none-any.whl", hash = "sha256:81a3407ddd2ee8df444cbacea00e2d038e40150acfa3001696fe0dcf1d3adfa4"},
+    {file = "gitdb-4.0.11.tar.gz", hash = "sha256:bf5421126136d6d0af55bc1e7c1af1c397a34f5b7bd79e776cd3e89785c2b04b"},
+]
+
+[[package]]
+name = "gitpython"
+version = "3.1.43"
+requires_python = ">=3.7"
+summary = "GitPython is a Python library used to interact with Git repositories"
+groups = ["default"]
+dependencies = [
+    "gitdb<5,>=4.0.1",
+]
+files = [
+    {file = "GitPython-3.1.43-py3-none-any.whl", hash = "sha256:eec7ec56b92aad751f9912a73404bc02ba212a23adb2c7098ee668417051a1ff"},
+    {file = "GitPython-3.1.43.tar.gz", hash = "sha256:35f314a9f878467f5453cc1fee295c3e18e52f1b99f10f6cf5b1682e968a9e7c"},
 ]
 
 [[package]]
@@ -170,6 +198,21 @@ dependencies = [
 files = [
     {file = "jaxtyping-0.2.28-py3-none-any.whl", hash = "sha256:4a54eb964087cd46463d9a86c805b4e4f5c20cce5f22049d6f35a26d9f105bd3"},
     {file = "jaxtyping-0.2.28.tar.gz", hash = "sha256:cd20bf1558a90c6d77c589354e35670ecc5b94925ef45bf1c020fde7b44fac8d"},
+]
+
+[[package]]
+name = "labml"
+version = "0.5.1"
+summary = "Organize Machine Learning Experiments"
+groups = ["default"]
+dependencies = [
+    "gitpython",
+    "numpy",
+    "pyyaml",
+]
+files = [
+    {file = "labml-0.5.1-py3-none-any.whl", hash = "sha256:b4e9bb62291abba492e0f82dfecead13e7688a5c36a99264ed70c425641c8485"},
+    {file = "labml-0.5.1.tar.gz", hash = "sha256:04186a63664b583d5f1010a0d9ac722c9198e132525e0a4c40e052adde524056"},
 ]
 
 [[package]]
@@ -317,6 +360,17 @@ marker = "python_version >= \"3.12\""
 files = [
     {file = "setuptools-69.2.0-py3-none-any.whl", hash = "sha256:c21c49fb1042386df081cb5d86759792ab89efca84cf114889191cd09aacc80c"},
     {file = "setuptools-69.2.0.tar.gz", hash = "sha256:0ff4183f8f42cd8fa3acea16c45205521a4ef28f73c6391d8a25e92893134f2e"},
+]
+
+[[package]]
+name = "smmap"
+version = "5.0.1"
+requires_python = ">=3.7"
+summary = "A pure Python implementation of a sliding window memory map manager"
+groups = ["default"]
+files = [
+    {file = "smmap-5.0.1-py3-none-any.whl", hash = "sha256:e6d8668fa5f93e706934a62d7b4db19c8d9eb8cf2adbb75ef1b675aa332b69da"},
+    {file = "smmap-5.0.1.tar.gz", hash = "sha256:dceeb6c0028fdb6734471eb07c0cd2aae706ccaecab45965ee83f11c8d3b1f62"},
 ]
 
 [[package]]

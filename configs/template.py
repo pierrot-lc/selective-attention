@@ -27,9 +27,16 @@ class TrainerConfig:
     n_eval_iter: int
     seed: int = 42
 
+@dataclass
+class LabMLConfig:
+    port: int
+    server_ip: str | int
+    app_url: str
+
 
 @dataclass
 class MainConfig:
     dataset: ShakespearDatasetConfig
     model: DecoderOnlyTransformerConfig
     trainer: TrainerConfig
+    labml: LabMLConfig
