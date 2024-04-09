@@ -12,6 +12,8 @@ trainer:
   n_training_iter: 10000
   n_eval_iter: 10
 
+mode: online
+
 hydra:
   job:
     chdir: true

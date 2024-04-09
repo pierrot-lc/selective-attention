@@ -43,10 +43,8 @@ def main(dict_config: DictConfig):
         project="cubeformer",
         config=OmegaConf.to_container(dict_config),
         entity="pierrotlc",
-        mode="online",
+        mode=dict_config.mode,
     ) as run:
-        print(run)
-        print(type(run))
         trainer.train(
             model,
             dataset,

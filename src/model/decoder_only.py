@@ -6,9 +6,11 @@ import jax.random as random
 from beartype import beartype
 from jaxtyping import Array, Bool, Float, Int, jaxtyped
 
+from .mha import MultiheadAttention
+
 
 class DecoderOnlyLayer(eqx.Module):
-    mha: nn.MultiheadAttention
+    mha: MultiheadAttention | nn.MultiheadAttention
     ffn: nn.Sequential
     norm_1: nn.LayerNorm
     norm_2: nn.LayerNorm
@@ -18,7 +20,7 @@ class DecoderOnlyLayer(eqx.Module):
         assert d_model % num_heads == 0
 
         key, sk = random.split(key)
-        self.mha = nn.MultiheadAttention(num_heads, d_model, key=sk)
+        self.mha = MultiheadAttention(num_heads, d_model, key=sk)
 
         key, sk_1, sk_2 = random.split(key, 3)
         self.ffn = nn.Sequential(
