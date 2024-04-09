@@ -99,8 +99,8 @@ class MultiheadCubicAttention(eqx.Module):
 
         sk = random.split(key, 3)
         self.project_q = nn.Linear(d_model, d_model, use_bias=False, key=sk[0])
-        self.hyper_k = nn.Linear(d_model, d_model * d_model, use_bias=False, key=sk[1])
-        self.hyper_v = nn.Linear(d_model, d_model * d_model, use_bias=False, key=sk[2])
+        self.hyper_k = random.normal(sk[1], (d_model,))
+        self.hyper_v = random.normal(sk[2], (d_model,))
 
     def __call__(
         self,
@@ -112,12 +112,9 @@ class MultiheadCubicAttention(eqx.Module):
         # First compute the queries.
         q = jax.vmap(self.project_q)(q)
 
-        # Generate the projection matrices for k and v parameterized by q.
-        project_v = jax.vmap(self.hyper_v)(q)
-        project_k = jax.vmap(self.hyper_k)(q)
-        # Shape of [q_seq, d_model, d_model].
-        project_v = rearrange(project_v, "s (d1 d2) -> s d1 d2", d1=self.d_model)
-        project_k = rearrange(project_k, "s (d1 d2) -> s d1 d2", d1=self.d_model)
+        # Use outer products to generate the projection matrices.
+        project_k = jnp.einsum("i,jk->jik", self.hyper_k, q)
+        project_v = jnp.einsum("i,jk->jik", self.hyper_v, q)
 
         # Compute k and v using the parameterized projections.
         # Shape of [q_seq, kv_seq, d_model].
