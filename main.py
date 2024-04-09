@@ -34,6 +34,7 @@ def main(dict_config: DictConfig):
         dataset.vocab_size,
         config.model.d_model,
         config.model.num_heads,
+        config.model.mha_type,
         config.model.num_layers,
         dataset.vocab_size,
         sk,

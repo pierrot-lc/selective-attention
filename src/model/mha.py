@@ -84,16 +84,18 @@ class MultiheadAttention(eqx.Module):
         return attn_result
 
 
-class MultiheadCubeAttention(eqx.Module):
+class MultiheadCubicAttention(eqx.Module):
     project_q: nn.Linear
     hyper_k: nn.Linear
     hyper_v: nn.Linear
     num_heads: int
+    d_model: int
 
     def __init__(self, num_heads: int, d_model: int, key: random.PRNGKey):
         super().__init__()
         assert d_model % num_heads == 0
         self.num_heads = num_heads
+        self.d_model = d_model
 
         sk = random.split(key, 3)
         self.project_q = nn.Linear(d_model, d_model, use_bias=False, key=sk[0])
@@ -113,20 +115,25 @@ class MultiheadCubeAttention(eqx.Module):
         # Generate the projection matrices for k and v parameterized by q.
         project_v = jax.vmap(self.hyper_v)(q)
         project_k = jax.vmap(self.hyper_k)(q)
-        project_v = rearrange(project_v, "s (d d) -> s d d")  # Shape of [q_seq, d_model, d_model].
-        project_k = rearrange(project_k, "s (d d) -> s d d")
+        # Shape of [q_seq, d_model, d_model].
+        project_v = rearrange(project_v, "s (d1 d2) -> s d1 d2", d1=self.d_model)
+        project_k = rearrange(project_k, "s (d1 d2) -> s d1 d2", d1=self.d_model)
 
         # Compute k and v using the parameterized projections.
-        k = jnp.einsum("ijk,lk->ilj", project_k, k)  # Shape of [q_seq, kv_seq, d_model].
+        # Shape of [q_seq, kv_seq, d_model].
+        k = jnp.einsum("ijk,lk->ilj", project_k, k)
         v = jnp.einsum("ijk,lk->ilj", project_v, v)
 
         # Separate heads.
+        # Shape of [num_heads, q_seq, kv_seq, d_model // num_heads].
         q_heads = rearrange(q, "s (n d) -> n s d", n=self.num_heads)
         k_heads = rearrange(k, "s1 s2 (n d) -> n s1 s2 d", n=self.num_heads)
         v_heads = rearrange(v, "s1 s2 (n d) -> n s1 s2 d", n=self.num_heads)
 
         # Finally compute cubic attention.
-        qkv_cubic_attention_heads = jax.vmap(qkv_cubic_attention, in_axes=(0, 0, 0, None))
+        qkv_cubic_attention_heads = jax.vmap(
+            qkv_cubic_attention, in_axes=(0, 0, 0, None)
+        )
         attn_result = qkv_cubic_attention_heads(q_heads, k_heads, v_heads, mask)
         attn_result = rearrange(attn_result, "n s d -> s (n d)")
         return attn_result

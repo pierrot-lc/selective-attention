@@ -17,6 +17,7 @@ class ShakespearDatasetConfig:
 class DecoderOnlyTransformerConfig:
     d_model: int
     num_heads: int
+    mha_type: str
     num_layers: int
 
 

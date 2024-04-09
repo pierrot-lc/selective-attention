@@ -6,21 +6,27 @@ import jax.random as random
 from beartype import beartype
 from jaxtyping import Array, Bool, Float, Int, jaxtyped
 
-from .mha import MultiheadAttention
+from .mha import MultiheadAttention, MultiheadCubicAttention
 
 
 class DecoderOnlyLayer(eqx.Module):
-    mha: MultiheadAttention | nn.MultiheadAttention
+    mha: MultiheadAttention | MultiheadCubicAttention | nn.MultiheadAttention
     ffn: nn.Sequential
     norm_1: nn.LayerNorm
     norm_2: nn.LayerNorm
 
-    def __init__(self, d_model: int, num_heads: int, key: random.PRNGKey):
+    def __init__(self, d_model: int, num_heads: int, mha_type: str, key: random.PRNGKey):
         super().__init__()
         assert d_model % num_heads == 0
 
         key, sk = random.split(key)
-        self.mha = MultiheadAttention(num_heads, d_model, key=sk)
+        match mha_type:
+            case "cubic":
+                self.mha = MultiheadCubicAttention(num_heads, d_model, key=sk)
+            case "normal":
+                self.mha = MultiheadAttention(num_heads, d_model, key=sk)
+            case _:
+                self.mha = nn.MultiheadAttention(num_heads, d_model, key=sk)
 
         key, sk_1, sk_2 = random.split(key, 3)
         self.ffn = nn.Sequential(
@@ -60,6 +66,7 @@ class DecoderOnlyTransformer(eqx.Module):
         num_embeddings: int,
         d_model: int,
         num_heads: int,
+        mha_type: str,
         num_layers: int,
         num_logits: int,
         key: random.PRNGKey,
@@ -71,7 +78,7 @@ class DecoderOnlyTransformer(eqx.Module):
 
         key, *subkeys = random.split(key, num_layers)
         self.layers = nn.Sequential(
-            [DecoderOnlyLayer(d_model, num_heads, sk) for sk in subkeys]
+            [DecoderOnlyLayer(d_model, num_heads, mha_type, sk) for sk in subkeys]
         )
 
         self.logits = nn.Linear(d_model, num_logits, key=key)
