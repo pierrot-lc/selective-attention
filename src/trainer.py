@@ -9,9 +9,9 @@ import jax.random as random
 import optax
 from beartype import beartype
 from jaxtyping import Array, Float, Int, jaxtyped
-from labml import tracker
 from optax.losses import softmax_cross_entropy_with_integer_labels
 from tqdm import tqdm
+from wandb.wandb_run import Run
 
 from .datasets import ShakespearDataset
 from .model import DecoderOnlyTransformer
@@ -104,6 +104,7 @@ def train(
     dataset: ShakespearDataset,
     n_iters: int,
     batch_size: int,
+    logger: Run,
     key: random.PRNGKey,
 ):
     grad_fn = jax.grad(loss_fn)
@@ -131,4 +132,4 @@ def train(
             model = eqx.combine(params, static)
             metrics = eval(model, dataset, batch_size, 10, key)
             metrics = jax.tree_util.tree_map(float, metrics)
-            tracker.save(iter_id, metrics)
+            logger.log(metrics)

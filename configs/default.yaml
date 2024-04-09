@@ -12,11 +12,6 @@ trainer:
   n_training_iter: 10000
   n_eval_iter: 10
 
-labml:
-  port: 8001
-  server_ip: localhost
-  app_url: http://${.server_ip}:${.port}/api/v1/default
-
 hydra:
   job:
     chdir: true

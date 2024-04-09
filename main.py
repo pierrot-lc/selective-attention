@@ -1,15 +1,14 @@
 import hydra
 import jax.random as random
 import src.trainer as trainer
+import wandb
 from configs.template import (
     DecoderOnlyTransformerConfig,
-    LabMLConfig,
     MainConfig,
     ShakespearDatasetConfig,
     TrainerConfig,
 )
 from hydra.core.config_store import ConfigStore
-from labml import experiment
 from omegaconf import DictConfig, OmegaConf
 from src.datasets import ShakespearDataset
 from src.model import DecoderOnlyTransformer
@@ -24,7 +23,6 @@ def main(dict_config: DictConfig):
         dataset=ShakespearDatasetConfig(**dict_config.dataset),
         model=DecoderOnlyTransformerConfig(**dict_config.model),
         trainer=TrainerConfig(**dict_config.trainer),
-        labml=LabMLConfig(**dict_config.labml),
     )
     dataset = ShakespearDataset.from_file(
         config.dataset.filepath, config.dataset.seq_len
@@ -41,16 +39,20 @@ def main(dict_config: DictConfig):
         sk,
     )
 
-    with experiment.record(
-        name="test",
-        exp_conf=OmegaConf.to_container(dict_config),
-        app_url=config.labml.app_url,
-    ):
+    with wandb.init(
+        project="cubeformer",
+        config=OmegaConf.to_container(dict_config),
+        entity="pierrotlc",
+        mode="online",
+    ) as run:
+        print(run)
+        print(type(run))
         trainer.train(
             model,
             dataset,
             config.trainer.n_training_iter,
             config.trainer.batch_size,
+            run,
             key,
         )
 
