@@ -1,46 +1,60 @@
-from functools import partial
+import hydra
+import jax.random as random
+import src.trainer as trainer
+import wandb
+from configs.template import (
+    DecoderOnlyTransformerConfig,
+    MainConfig,
+    ShakespearDatasetConfig,
+    TrainerConfig,
+)
+from hydra.core.config_store import ConfigStore
+from omegaconf import DictConfig, OmegaConf
+from src.datasets import ShakespearDataset
+from src.model import DecoderOnlyTransformer
 
-import torch.nn as nn
-import torch.optim as optim
-from torch.utils.data import DataLoader
-
-from src.dataset import TranslationDataset
-from src.model import TranslationModel
-from src.trainer import Trainer
+cs = ConfigStore.instance()
+cs.store(name="main-config", node=MainConfig)
 
 
-def main():
-    dataset = TranslationDataset.from_file("./data/fra-eng/fra-eng.txt")
-    model = TranslationModel(
-        len(dataset.french_vocab),
-        len(dataset.english_vocab),
-        dataset.french_vocab["<pad>"],
-        dataset.english_vocab["<pad>"],
-        92,
-        nhead=2,
-        num_encoder_layers=3,
-        num_decoder_layers=3,
-        dim_feedforward=92 * 4,
-        dropout=0.05,
+@hydra.main(config_path="configs", config_name="default", version_base="1.1")
+def main(dict_config: DictConfig):
+    config = MainConfig(
+        dataset=ShakespearDatasetConfig(**dict_config.dataset),
+        model=DecoderOnlyTransformerConfig(**dict_config.model),
+        trainer=TrainerConfig(**dict_config.trainer),
+    )
+    dataset = ShakespearDataset.from_file(
+        config.dataset.filepath, config.dataset.seq_len
+    )
+    key = random.key(config.trainer.seed)
+
+    key, sk = random.split(key)
+    model = DecoderOnlyTransformer(
+        dataset.vocab_size,
+        config.model.d_model,
+        config.model.num_heads,
+        config.model.num_layers,
+        dataset.vocab_size,
+        sk,
     )
 
-    dataloader = DataLoader(
-        dataset,
-        batch_size=64,
-        collate_fn=partial(
-            dataset.collate_fn,
-            src_pad_idx=dataset.french_vocab["<pad>"],
-            tgt_pad_idx=dataset.english_vocab["<pad>"],
-        ),
-        shuffle=True,
-    )
-
-    optimizer = optim.AdamW(model.parameters(), lr=3e-4)
-
-    trainer = Trainer(model, dataloader, optimizer)
-
-    trainer.launch_training()
+    with wandb.init(
+        project="cubeformer",
+        config=OmegaConf.to_container(dict_config),
+        entity="pierrotlc",
+        mode=dict_config.mode,
+    ) as run:
+        trainer.train(
+            model,
+            dataset,
+            config.trainer.n_training_iter,
+            config.trainer.batch_size,
+            run,
+            key,
+        )
 
 
 if __name__ == "__main__":
+    # Launch with hydra.
     main()
