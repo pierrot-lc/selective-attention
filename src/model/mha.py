@@ -42,6 +42,18 @@ def qkv_cubic_attention(
     return attn_result
 
 
+@jax.jit
+@jaxtyped(typechecker=beartype)
+def cross_product_matching(
+    query: Float[Array, "q_seq q_size"], other: Float[Array, "o_seq o_size"]
+) -> Float[Array, "q_seq o_seq q_size+o_size"]:
+    """Concatenate every query element to every other element."""
+    cat = lambda v1, v2: jnp.concatenate((v1, v2), axis=0)
+    cat = jax.vmap(cat, in_axes=(None, 0))
+    cat = jax.vmap(cat, in_axes=(0, None))
+    return cat(query, other)
+
+
 class MultiheadAttention(eqx.Module):
     project_q: nn.Linear
     project_k: nn.Linear
@@ -86,22 +98,22 @@ class MultiheadAttention(eqx.Module):
 
 class MultiheadCubicAttention(eqx.Module):
     project_q: nn.Linear
-    hyper_k: nn.Linear
-    hyper_v: nn.Linear
+    project_k: nn.Linear
+    project_v: nn.Linear
     num_heads: int
-    d_model: int
 
     def __init__(self, num_heads: int, d_model: int, key: random.PRNGKey):
         super().__init__()
         assert d_model % num_heads == 0
         self.num_heads = num_heads
-        self.d_model = d_model
 
         sk = random.split(key, 3)
         self.project_q = nn.Linear(d_model, d_model, use_bias=False, key=sk[0])
-        self.hyper_k = random.normal(sk[1], (d_model,))
-        self.hyper_v = random.normal(sk[2], (d_model,))
+        self.project_k = nn.Linear(2 * d_model, d_model, use_bias=False, key=sk[1])
+        self.project_v = nn.Linear(2 * d_model, d_model, use_bias=False, key=sk[2])
 
+    @eqx.filter_jit
+    @jaxtyped(typechecker=beartype)
     def __call__(
         self,
         q: Float[Array, "seq_len d_model"],
@@ -112,14 +124,14 @@ class MultiheadCubicAttention(eqx.Module):
         # First compute the queries.
         q = jax.vmap(self.project_q)(q)
 
-        # Use outer products to generate the projection matrices.
-        project_k = jnp.einsum("i,jk->jik", self.hyper_k, q)
-        project_v = jnp.einsum("i,jk->jik", self.hyper_v, q)
-
-        # Compute k and v using the parameterized projections.
+        # Match every k and v to every q.
         # Shape of [q_seq, kv_seq, d_model].
-        k = jnp.einsum("ijk,lk->ilj", project_k, k)
-        v = jnp.einsum("ijk,lk->ilj", project_v, v)
+        k = cross_product_matching(q, k)
+        v = cross_product_matching(q, v)
+
+        # Project k and v.
+        k = jax.vmap(jax.vmap(self.project_k))(k)
+        v = jax.vmap(jax.vmap(self.project_v))(v)
 
         # Separate heads.
         # Shape of [num_heads, q_seq, kv_seq, d_model // num_heads].
