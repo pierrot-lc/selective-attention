@@ -1,5 +1,5 @@
 [project]
-name = "Cubeformer"
+name = "Selective Attention Transformer"
 version = "0.0.1"
 description = "Why not?"
 authors = [

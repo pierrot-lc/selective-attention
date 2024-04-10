@@ -2,7 +2,7 @@
 model:
   d_model: 32
   num_heads: 2
-  mha_type: cubic
+  mha_type: selective
   num_layers: 3
 
 dataset:

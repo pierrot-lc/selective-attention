@@ -14,7 +14,7 @@ class ShakespearDatasetConfig:
 
 
 @dataclass
-class DecoderOnlyTransformerConfig:
+class DecoderTransformerConfig:
     d_model: int
     num_heads: int
     mha_type: str
@@ -31,5 +31,5 @@ class TrainerConfig:
 @dataclass
 class MainConfig:
     dataset: ShakespearDatasetConfig
-    model: DecoderOnlyTransformerConfig
+    model: DecoderTransformerConfig
     trainer: TrainerConfig

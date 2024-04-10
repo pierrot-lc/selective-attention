@@ -14,7 +14,7 @@ from tqdm import tqdm
 from wandb.wandb_run import Run
 
 from .datasets import ShakespearDataset
-from .model import DecoderOnlyTransformer
+from .model import DecoderTransformer
 
 
 def loader(dataset: Iterable, batch_size: int, n_iters: int, key: random.PRNGKey):
@@ -72,7 +72,7 @@ def batch_metrics(
 
 
 def eval(
-    model: DecoderOnlyTransformer,
+    model: DecoderTransformer,
     dataset: ShakespearDataset,
     batch_size: int,
     n_iters: int,
@@ -100,7 +100,7 @@ def eval(
 
 
 def train(
-    model: DecoderOnlyTransformer,
+    model: DecoderTransformer,
     dataset: ShakespearDataset,
     n_iters: int,
     batch_size: int,

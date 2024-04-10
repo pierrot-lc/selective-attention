@@ -29,7 +29,7 @@ def qkv_attention(
 
 @jax.jit
 @jaxtyped(typechecker=beartype)
-def qkv_cubic_attention(
+def qkv_selective_attention(
     q: Float[Array, "q_seq d_model"],
     k: Float[Array, "q_seq kv_seq d_model"],
     v: Float[Array, "q_seq kv_seq d_model"],
@@ -90,13 +90,13 @@ class MultiheadAttention(eqx.Module):
         v_heads = rearrange(v, "s (n d) -> n s d", n=self.num_heads)
 
         # Do not vmap the mask. The mask is the same accross all heads.
-        qkv_attention_heads = jax.vmap(qkv_attention, in_axes=(0, 0, 0, None))
-        attn_result = qkv_attention_heads(q_heads, k_heads, v_heads, mask)
+        multihead_qkv_attention = jax.vmap(qkv_attention, in_axes=(0, 0, 0, None))
+        attn_result = multihead_qkv_attention(q_heads, k_heads, v_heads, mask)
         attn_result = rearrange(attn_result, "n s d -> s (n d)")
         return attn_result
 
 
-class MultiheadCubicAttention(eqx.Module):
+class MultiheadSelectiveAttention(eqx.Module):
     project_q: nn.Linear
     project_k: nn.Linear
     project_v: nn.Linear
@@ -140,9 +140,9 @@ class MultiheadCubicAttention(eqx.Module):
         v_heads = rearrange(v, "s1 s2 (n d) -> n s1 s2 d", n=self.num_heads)
 
         # Finally compute cubic attention.
-        qkv_cubic_attention_heads = jax.vmap(
-            qkv_cubic_attention, in_axes=(0, 0, 0, None)
+        multihead_qkv_attention = jax.vmap(
+            qkv_selective_attention, in_axes=(0, 0, 0, None)
         )
-        attn_result = qkv_cubic_attention_heads(q_heads, k_heads, v_heads, mask)
+        attn_result = multihead_qkv_attention(q_heads, k_heads, v_heads, mask)
         attn_result = rearrange(attn_result, "n s d -> s (n d)")
         return attn_result

@@ -6,11 +6,11 @@ import jax.random as random
 from beartype import beartype
 from jaxtyping import Array, Bool, Float, Int, jaxtyped
 
-from .mha import MultiheadAttention, MultiheadCubicAttention
+from .mha import MultiheadAttention, MultiheadSelectiveAttention
 
 
-class DecoderOnlyLayer(eqx.Module):
-    mha: MultiheadAttention | MultiheadCubicAttention | nn.MultiheadAttention
+class DecoderLayer(eqx.Module):
+    mha: MultiheadAttention | MultiheadSelectiveAttention | nn.MultiheadAttention
     ffn: nn.Sequential
     norm_1: nn.LayerNorm
     norm_2: nn.LayerNorm
@@ -21,8 +21,8 @@ class DecoderOnlyLayer(eqx.Module):
 
         key, sk = random.split(key)
         match mha_type:
-            case "cubic":
-                self.mha = MultiheadCubicAttention(num_heads, d_model, key=sk)
+            case "selective":
+                self.mha = MultiheadSelectiveAttention(num_heads, d_model, key=sk)
             case "normal":
                 self.mha = MultiheadAttention(num_heads, d_model, key=sk)
             case _:
@@ -56,7 +56,7 @@ class DecoderOnlyLayer(eqx.Module):
         return x
 
 
-class DecoderOnlyTransformer(eqx.Module):
+class DecoderTransformer(eqx.Module):
     layers: nn.Sequential
     embedding: nn.Embedding
     logits: nn.Linear
@@ -78,7 +78,7 @@ class DecoderOnlyTransformer(eqx.Module):
 
         key, *subkeys = random.split(key, num_layers)
         self.layers = nn.Sequential(
-            [DecoderOnlyLayer(d_model, num_heads, mha_type, sk) for sk in subkeys]
+            [DecoderLayer(d_model, num_heads, mha_type, sk) for sk in subkeys]
         )
 
         self.logits = nn.Linear(d_model, num_logits, key=key)
