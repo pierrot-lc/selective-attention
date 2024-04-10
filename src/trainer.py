@@ -27,8 +27,15 @@ def loader(dataset: Iterable, batch_size: int, n_iters: int, key: random.PRNGKey
 
 
 def count_params(model: eqx.Module) -> Int[Array, ""]:
-    """Count the number of parameters of the given equinox module."""
-    params, _ = eqx.partition(model, eqx.is_array)
+    """Count the number of parameters of the given equinox module.
+    Ignore the RoPE parameters as they are not learnable.
+    """
+    # Replace the params of the RoPE module by None to filter them out.
+    model = jax.tree_util.tree_map_with_path(
+        lambda p, v: None if "rope" in jax.tree_util.keystr(p) else v, model
+    )
+    params = eqx.filter(model, eqx.is_array)
+    # jax.tree_util.tree_map_with_path(lambda p, _: print(p), params)
 
     n_params = jax.tree.map(lambda p: jnp.prod(jnp.array(p.shape)), params)
     n_params = jnp.array(jax.tree.leaves(n_params))
@@ -67,7 +74,7 @@ def batch_metrics(
     metrics["cross-entropy"] = softmax_cross_entropy_with_integer_labels(y_logits, y)
     metrics["accuracy"] = y_logits.argmax(axis=2) == y
 
-    metrics = jax.tree_util.tree_map(jnp.mean, metrics)
+    metrics = jax.tree.map(jnp.mean, metrics)
     return metrics
 
 
@@ -95,7 +102,7 @@ def eval(
             metrics[name].append(value)
 
     metrics = {name: jnp.array(values) for name, values in metrics.items()}
-    metrics = jax.tree_util.tree_map(jnp.mean, metrics)
+    metrics = jax.tree.map(jnp.mean, metrics)
     return metrics
 
 
@@ -131,5 +138,5 @@ def train(
             key, sk = random.split(key)
             model = eqx.combine(params, static)
             metrics = eval(model, dataset, batch_size, 10, key)
-            metrics = jax.tree_util.tree_map(float, metrics)
+            metrics = jax.tree.map(float, metrics)
             logger.log(metrics)

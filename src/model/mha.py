@@ -9,6 +9,8 @@ from beartype import beartype
 from einops import rearrange
 from jaxtyping import Array, Bool, Float, jaxtyped
 
+from .rope import RoPE
+
 
 @jax.jit
 @jaxtyped(typechecker=beartype)
@@ -58,6 +60,7 @@ class MultiheadAttention(eqx.Module):
     project_q: nn.Linear
     project_k: nn.Linear
     project_v: nn.Linear
+    rope: RoPE
     num_heads: int
 
     def __init__(self, num_heads: int, d_model: int, key: random.PRNGKey):
@@ -69,6 +72,8 @@ class MultiheadAttention(eqx.Module):
         self.project_q = nn.Linear(d_model, d_model, use_bias=False, key=sk[0])
         self.project_k = nn.Linear(d_model, d_model, use_bias=False, key=sk[1])
         self.project_v = nn.Linear(d_model, d_model, use_bias=False, key=sk[2])
+
+        self.rope = RoPE(d_model // num_heads, max_seq_len=10000)
 
     @eqx.filter_jit
     @jaxtyped(typechecker=beartype)
@@ -89,6 +94,11 @@ class MultiheadAttention(eqx.Module):
         k_heads = rearrange(k, "s (n d) -> n s d", n=self.num_heads)
         v_heads = rearrange(v, "s (n d) -> n s d", n=self.num_heads)
 
+        # Apply RoPE.
+        rope = jax.vmap(self.rope)
+        q_heads = rope(q_heads)
+        k_heads = rope(k_heads)
+
         # Do not vmap the mask. The mask is the same accross all heads.
         multihead_qkv_attention = jax.vmap(qkv_attention, in_axes=(0, 0, 0, None))
         attn_result = multihead_qkv_attention(q_heads, k_heads, v_heads, mask)
@@ -100,6 +110,7 @@ class MultiheadSelectiveAttention(eqx.Module):
     project_q: nn.Linear
     project_k: nn.Linear
     project_v: nn.Linear
+    rope: RoPE
     num_heads: int
 
     def __init__(self, num_heads: int, d_model: int, key: random.PRNGKey):
@@ -111,6 +122,8 @@ class MultiheadSelectiveAttention(eqx.Module):
         self.project_q = nn.Linear(d_model, d_model, use_bias=False, key=sk[0])
         self.project_k = nn.Linear(2 * d_model, d_model, use_bias=False, key=sk[1])
         self.project_v = nn.Linear(2 * d_model, d_model, use_bias=False, key=sk[2])
+
+        self.rope = RoPE(d_model // num_heads, max_seq_len=10000)
 
     @eqx.filter_jit
     @jaxtyped(typechecker=beartype)
@@ -138,6 +151,12 @@ class MultiheadSelectiveAttention(eqx.Module):
         q_heads = rearrange(q, "s (n d) -> n s d", n=self.num_heads)
         k_heads = rearrange(k, "s1 s2 (n d) -> n s1 s2 d", n=self.num_heads)
         v_heads = rearrange(v, "s1 s2 (n d) -> n s1 s2 d", n=self.num_heads)
+
+        # Apply RoPE.
+        rope = jax.vmap(self.rope)  # Multiple heads.
+        q_heads = rope(q_heads)
+        rope = jax.vmap(rope)  # Additional q_seq dimension.
+        k_heads = rope(k_heads)
 
         # Finally compute cubic attention.
         multihead_qkv_attention = jax.vmap(

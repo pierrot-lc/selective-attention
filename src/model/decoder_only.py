@@ -76,7 +76,7 @@ class DecoderTransformer(eqx.Module):
         key, sk = random.split(key)
         self.embedding = nn.Embedding(num_embeddings, d_model, key=sk)
 
-        key, *subkeys = random.split(key, num_layers)
+        key, *subkeys = random.split(key, num_layers+1)
         self.layers = nn.Sequential(
             [DecoderLayer(d_model, num_heads, mha_type, sk) for sk in subkeys]
         )
