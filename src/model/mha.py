@@ -27,6 +27,33 @@ def qkv_attention(
     return attn_result
 
 
+@jax.jit
+@jaxtyped(typechecker=beartype)
+def qkv_selective_attention(
+    q: Float[Array, "q_seq d_model"],
+    k: Float[Array, "q_seq kv_seq d_model"],
+    v: Float[Array, "q_seq kv_seq d_model"],
+    mask: Optional[Bool[Array, "q_seq kv_seq"]] = None,
+) -> Float[Array, "q_seq d_model"]:
+    q = rearrange(q, "s d -> s 1 d")
+    mask = rearrange(mask, "s t -> s 1 t")
+    attn_result = jax.vmap(qkv_attention)(q, k, v, mask)
+    attn_result = rearrange(attn_result, "s 1 d -> s d")
+    return attn_result
+
+
+@jax.jit
+@jaxtyped(typechecker=beartype)
+def cross_product_matching(
+    query: Float[Array, "q_seq q_size"], other: Float[Array, "o_seq o_size"]
+) -> Float[Array, "q_seq o_seq q_size+o_size"]:
+    """Concatenate every query element to every other element."""
+    cat = lambda v1, v2: jnp.concatenate((v1, v2), axis=0)
+    cat = jax.vmap(cat, in_axes=(None, 0))
+    cat = jax.vmap(cat, in_axes=(0, None))
+    return cat(query, other)
+
+
 class MultiheadAttention(eqx.Module):
     project_q: nn.Linear
     project_k: nn.Linear
@@ -52,16 +79,70 @@ class MultiheadAttention(eqx.Module):
         v: Float[Array, "seq_len d_model"],
         mask: Bool[Array, "seq_len seq_len"],
     ) -> Float[Array, "seq_len d_model"]:
+        # Project q k and v.
         q = jax.vmap(self.project_q)(q)
         k = jax.vmap(self.project_k)(k)
         v = jax.vmap(self.project_v)(v)
 
+        # Separate heads.
         q_heads = rearrange(q, "s (n d) -> n s d", n=self.num_heads)
         k_heads = rearrange(k, "s (n d) -> n s d", n=self.num_heads)
         v_heads = rearrange(v, "s (n d) -> n s d", n=self.num_heads)
 
         # Do not vmap the mask. The mask is the same accross all heads.
-        qkv_attention_heads = jax.vmap(qkv_attention, in_axes=(0, 0, 0, None))
-        attn_result = qkv_attention_heads(q_heads, k_heads, v_heads, mask)
+        multihead_qkv_attention = jax.vmap(qkv_attention, in_axes=(0, 0, 0, None))
+        attn_result = multihead_qkv_attention(q_heads, k_heads, v_heads, mask)
+        attn_result = rearrange(attn_result, "n s d -> s (n d)")
+        return attn_result
+
+
+class MultiheadSelectiveAttention(eqx.Module):
+    project_q: nn.Linear
+    project_k: nn.Linear
+    project_v: nn.Linear
+    num_heads: int
+
+    def __init__(self, num_heads: int, d_model: int, key: random.PRNGKey):
+        super().__init__()
+        assert d_model % num_heads == 0
+        self.num_heads = num_heads
+
+        sk = random.split(key, 3)
+        self.project_q = nn.Linear(d_model, d_model, use_bias=False, key=sk[0])
+        self.project_k = nn.Linear(2 * d_model, d_model, use_bias=False, key=sk[1])
+        self.project_v = nn.Linear(2 * d_model, d_model, use_bias=False, key=sk[2])
+
+    @eqx.filter_jit
+    @jaxtyped(typechecker=beartype)
+    def __call__(
+        self,
+        q: Float[Array, "seq_len d_model"],
+        k: Float[Array, "seq_len d_model"],
+        v: Float[Array, "seq_len d_model"],
+        mask: Bool[Array, "seq_len seq_len"],
+    ) -> Float[Array, "seq_len d_model"]:
+        # First compute the queries.
+        q = jax.vmap(self.project_q)(q)
+
+        # Match every k and v to every q.
+        # Shape of [q_seq, kv_seq, d_model].
+        k = cross_product_matching(q, k)
+        v = cross_product_matching(q, v)
+
+        # Project k and v.
+        k = jax.vmap(jax.vmap(self.project_k))(k)
+        v = jax.vmap(jax.vmap(self.project_v))(v)
+
+        # Separate heads.
+        # Shape of [num_heads, q_seq, kv_seq, d_model // num_heads].
+        q_heads = rearrange(q, "s (n d) -> n s d", n=self.num_heads)
+        k_heads = rearrange(k, "s1 s2 (n d) -> n s1 s2 d", n=self.num_heads)
+        v_heads = rearrange(v, "s1 s2 (n d) -> n s1 s2 d", n=self.num_heads)
+
+        # Finally compute cubic attention.
+        multihead_qkv_attention = jax.vmap(
+            qkv_selective_attention, in_axes=(0, 0, 0, None)
+        )
+        attn_result = multihead_qkv_attention(q_heads, k_heads, v_heads, mask)
         attn_result = rearrange(attn_result, "n s d -> s (n d)")
         return attn_result

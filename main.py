@@ -3,7 +3,7 @@ import jax.random as random
 import src.trainer as trainer
 import wandb
 from configs.template import (
-    DecoderOnlyTransformerConfig,
+    DecoderTransformerConfig,
     MainConfig,
     ShakespearDatasetConfig,
     TrainerConfig,
@@ -11,7 +11,7 @@ from configs.template import (
 from hydra.core.config_store import ConfigStore
 from omegaconf import DictConfig, OmegaConf
 from src.datasets import ShakespearDataset
-from src.model import DecoderOnlyTransformer
+from src.model import DecoderTransformer
 
 cs = ConfigStore.instance()
 cs.store(name="main-config", node=MainConfig)
@@ -21,7 +21,7 @@ cs.store(name="main-config", node=MainConfig)
 def main(dict_config: DictConfig):
     config = MainConfig(
         dataset=ShakespearDatasetConfig(**dict_config.dataset),
-        model=DecoderOnlyTransformerConfig(**dict_config.model),
+        model=DecoderTransformerConfig(**dict_config.model),
         trainer=TrainerConfig(**dict_config.trainer),
     )
     dataset = ShakespearDataset.from_file(
@@ -30,10 +30,11 @@ def main(dict_config: DictConfig):
     key = random.key(config.trainer.seed)
 
     key, sk = random.split(key)
-    model = DecoderOnlyTransformer(
+    model = DecoderTransformer(
         dataset.vocab_size,
         config.model.d_model,
         config.model.num_heads,
+        config.model.mha_type,
         config.model.num_layers,
         dataset.vocab_size,
         sk,
