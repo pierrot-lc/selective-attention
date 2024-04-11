@@ -27,6 +27,7 @@ def main(dict_config: DictConfig):
     dataset = ShakespearDataset.from_file(
         config.dataset.filepath, config.dataset.seq_len
     )
+    train_dataset, test_dataset = dataset.split(split_ratio=0.8)
     key = random.key(config.trainer.seed)
 
     key, sk = random.split(key)
@@ -48,8 +49,10 @@ def main(dict_config: DictConfig):
     ) as run:
         trainer.train(
             model,
-            dataset,
+            train_dataset,
+            test_dataset,
             config.trainer.n_training_iter,
+            config.trainer.n_eval_iter,
             config.trainer.batch_size,
             run,
             key,

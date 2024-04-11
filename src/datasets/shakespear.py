@@ -1,5 +1,6 @@
 from collections import Counter
 from pathlib import Path
+from typing import Optional
 
 import equinox as eqx
 import jax.numpy as jnp
@@ -10,17 +11,22 @@ from jaxtyping import Array, Int, jaxtyped
 class ShakespearDataset(eqx.Module):
     text: str
     encoded_text: Int[Array, "total_characters"]
+    uniq_chars: list[str]
     char_to_int: dict[str, int]
     int_to_char: dict[int, str]
     vocab_size: int
     seq_len: int
 
-    def __init__(self, text: str, seq_len: int):
+    def __init__(self, text: str, seq_len: int, uniq_chars: Optional[list[str]] = None):
         self.text = text
         self.seq_len = seq_len
 
-        uniq_chars = list(sorted(Counter(text)))
+        if uniq_chars is None:
+            uniq_chars = list(sorted(Counter(text)))
+
+        self.uniq_chars = uniq_chars
         self.vocab_size = len(uniq_chars)
+
         self.char_to_int = {char: id for id, char in enumerate(uniq_chars)}
         self.int_to_char = {id: char for id, char in self.char_to_int.items()}
 
@@ -34,6 +40,16 @@ class ShakespearDataset(eqx.Module):
 
     def __len__(self) -> int:
         return max(len(self.encoded_text) - self.seq_len + 1, 1)
+
+    def split(
+        self, split_ratio: float
+    ) -> tuple["ShakespearDataset", "ShakespearDataset"]:
+        split_idx = int(len(self) * split_ratio)
+
+        split1 = ShakespearDataset(self.text[:split_idx], self.seq_len, self.uniq_chars)
+        split2 = ShakespearDataset(self.text[split_idx:], self.seq_len, self.uniq_chars)
+
+        return split1, split2
 
     @classmethod
     def from_file(cls, filepath: Path, seq_len: int) -> "ShakespearDataset":

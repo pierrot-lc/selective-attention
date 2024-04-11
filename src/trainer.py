@@ -108,8 +108,10 @@ def eval(
 
 def train(
     model: DecoderTransformer,
-    dataset: ShakespearDataset,
-    n_iters: int,
+    train_dataset: ShakespearDataset,
+    test_dataset: ShakespearDataset,
+    n_training_iter: int,
+    n_eval_iter: int,
     batch_size: int,
     logger: Run,
     key: random.PRNGKey,
@@ -124,9 +126,9 @@ def train(
 
     key, sk = random.split(key)
     dataloader = tqdm(
-        loader(dataset, batch_size, n_iters, sk),
+        loader(train_dataset, batch_size, n_training_iter, sk),
         desc="Training",
-        total=n_iters,
+        total=n_training_iter,
     )
 
     for iter_id, batch in enumerate(dataloader):
@@ -135,8 +137,14 @@ def train(
         params = optax.apply_updates(params, updates)
 
         if iter_id % 100 == 0:
-            key, sk = random.split(key)
+            all_metrics = dict()
             model = eqx.combine(params, static)
-            metrics = eval(model, dataset, batch_size, 10, key)
-            metrics = jax.tree.map(float, metrics)
-            logger.log(metrics)
+
+            for dataset, prefix in [(train_dataset, "train"), (test_dataset, "test")]:
+                key, sk = random.split(key)
+                metrics = eval(model, test_dataset, batch_size, n_eval_iter, key)
+                metrics = jax.tree.map(float, metrics)
+                metrics = {f"{prefix}/{name}": value for name, value in metrics.items()}
+                all_metrics.update(metrics)
+
+            logger.log(all_metrics)
