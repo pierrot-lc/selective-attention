@@ -1,17 +1,17 @@
 ---
 model:
-  d_model: 32
-  num_heads: 2
+  d_model: 128
+  num_heads: 4
   mha_type: selective
-  num_layers: 3
+  num_layers: 6
 
 dataset:
-  seq_len: 10
+  seq_len: 300
 
 trainer:
-  batch_size: 64
-  n_training_iter: 10000
-  n_eval_iter: 10
+  batch_size: 16
+  n_training_iter: 200000
+  n_eval_iter: 20
 
 mode: online
 
