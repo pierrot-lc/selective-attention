@@ -20,11 +20,17 @@ def qkv_attention(
     v: Float[Array, "kv_seq d_model"],
     mask: Bool[Array, "q_seq kv_seq"],
 ) -> Float[Array, "q_seq d_model"]:
-    logits = jnp.einsum("ij,kj->ik", q, k)
+    """Compute the attention between q and k, and apply it to v.
+    This is the standard attention mechanism. Attention is only applied
+    where mask is true. q, k and v should already be projected.
+
+    Paper: Attention is All You Need - https://arxiv.org/abs/1706.03762
+    """
+    logits = jnp.einsum("ij,kj->ik", q, k)  # Dot-product attention.
     logits = logits / jnp.sqrt(k.shape[0])
 
     attn_distrib = jax.nn.softmax(logits, axis=1, where=mask, initial=-jnp.inf)
-    attn_result = jnp.einsum("ij,jk->ik", attn_distrib, v)
+    attn_result = jnp.einsum("ij,jk->ik", attn_distrib, v)  # Apply attention to v.
 
     return attn_result
 
@@ -37,6 +43,9 @@ def qkv_selective_attention(
     v: Float[Array, "q_seq kv_seq d_model"],
     mask: Bool[Array, "q_seq kv_seq"],
 ) -> Float[Array, "q_seq d_model"]:
+    """Compute the attention between every q and their corresponding k and v.
+    Every query has its own sequence of keys and values to which it will attend.
+    """
     q = rearrange(q, "s d -> s 1 d")
     mask = rearrange(mask, "s t -> s 1 t")
     attn_result = jax.vmap(qkv_attention)(q, k, v, mask)
@@ -57,6 +66,10 @@ def cross_product_matching(
 
 
 class MultiheadAttention(eqx.Module):
+    """Project q, k and v before applying the standard attention.
+    Optionally apply rotary positional encoding to q and k.
+    """
+
     project_q: nn.Linear
     project_k: nn.Linear
     project_v: nn.Linear
@@ -108,6 +121,10 @@ class MultiheadAttention(eqx.Module):
 
 
 class MultiheadSelectiveAttention(eqx.Module):
+    """Project q, k and v before applying the selective attention.
+    Optionally apply rotary positional encoding to q and k.
+    """
+
     project_q: nn.Linear
     project_k: nn.Linear
     project_v: nn.Linear

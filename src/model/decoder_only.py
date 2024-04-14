@@ -10,6 +10,14 @@ from .mha import MultiheadAttention, MultiheadSelectiveAttention
 
 
 class DecoderLayer(eqx.Module):
+    """A transformer decoder-only block.
+
+    You can specify the attention to use (`mha_type`):
+        - "selective": Use the selective attention.
+        - "standard": Use the standard attention, implemented here.
+        - "equinox": Use the standard attention, implemented by equinox.
+    """
+
     mha: MultiheadAttention | MultiheadSelectiveAttention | nn.MultiheadAttention
     ffn: nn.Sequential
     norm_1: nn.LayerNorm
@@ -56,6 +64,9 @@ class DecoderLayer(eqx.Module):
         x: Float[Array, "seq_len d_model"],
         mask: Bool[Array, "seq_len seq_len"],
     ) -> Float[Array, "seq_len d_model"]:
+        """Apply the decoder layer to the input. The attention between token i and j
+        is computed where the mask[i, j] is true.
+        """
         x_att = self.mha(x, x, x, mask)
         x = jax.vmap(self.norm_1)(x + x_att)
 
@@ -66,6 +77,14 @@ class DecoderLayer(eqx.Module):
 
 
 class DecoderTransformer(eqx.Module):
+    """A transformer decoder-only model.
+
+    You can specify the attention to use (`mha_type`):
+        - "selective": Use the selective attention.
+        - "standard": Use the standard attention, implemented here.
+        - "equinox": Use the standard attention, implemented by equinox.
+    """
+
     layers: nn.Sequential
     embedding: nn.Embedding
     logits: nn.Linear
@@ -96,6 +115,7 @@ class DecoderTransformer(eqx.Module):
     @eqx.filter_jit
     @jaxtyped(typechecker=beartype)
     def __call__(self, x: Int[Array, "seq_len"]) -> Float[Array, "seq_len d_model"]:
+        """Apply the decoder to the input sequence. The mask used is a causal mask."""
         mask = jnp.eye(x.shape[0], dtype=int)
         mask = jnp.cumsum(mask, axis=1).T
         mask = mask.astype(bool)

@@ -52,9 +52,10 @@ def main(dict_config: DictConfig):
             model,
             train_dataset,
             test_dataset,
+            config.trainer.learning_rate,
+            config.trainer.batch_size,
             config.trainer.n_training_iter,
             config.trainer.n_eval_iter,
-            config.trainer.batch_size,
             run,
             key,
         )

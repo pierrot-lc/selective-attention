@@ -24,6 +24,7 @@ class DecoderTransformerConfig:
 
 @dataclass
 class TrainerConfig:
+    learning_rate: float
     batch_size: int
     n_training_iter: int
     n_eval_iter: int

@@ -1,15 +1,16 @@
 ---
 model:
-  d_model: 128
-  num_heads: 4
+  d_model: 24
+  num_heads: 2
   mha_type: selective
   rope: true
-  num_layers: 6
+  num_layers: 3
 
 dataset:
   seq_len: 300
 
 trainer:
+  learning_rate: 1e-4
   batch_size: 16
   n_training_iter: 200000
   n_eval_iter: 20

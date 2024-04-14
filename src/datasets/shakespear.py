@@ -9,6 +9,12 @@ from jaxtyping import Array, Int, jaxtyped
 
 
 class ShakespearDataset(eqx.Module):
+    """A dataset for the Shakespear text generation task.
+
+    This dataset will encode the text into integers and provide sequences of
+    tokens of a given length. You can use it to extract random sequences of tokens.
+    It does not use a complicated tokenization scheme, but a raw character-based encoding.
+    """
     text: str
     encoded_text: Int[Array, "total_characters"]
     uniq_chars: list[str]
@@ -35,15 +41,21 @@ class ShakespearDataset(eqx.Module):
 
     @jaxtyped(typechecker=beartype)
     def __getitem__(self, i: Int[Array, ""]) -> Int[Array, "seq_len"]:
+        """Return the ith sequence of tokens."""
         tokens = self.encoded_text[i : i + self.seq_len]
         return tokens
 
     def __len__(self) -> int:
+        """Return the number of sequences that can be extracted from the text."""
         return max(len(self.encoded_text) - self.seq_len + 1, 1)
 
     def split(
         self, split_ratio: float
     ) -> tuple["ShakespearDataset", "ShakespearDataset"]:
+        """Split the dataset chronologicaly.
+
+        The mapping between characters and integers remains the same.
+        """
         split_idx = int(len(self) * split_ratio)
 
         split1 = ShakespearDataset(self.text[:split_idx], self.seq_len, self.uniq_chars)

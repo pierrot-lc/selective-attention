@@ -6,6 +6,12 @@ from jaxtyping import Array, Float, jaxtyped
 
 
 class RoPE(eqx.Module):
+    """Rotate tokens based on their position in the sequence.
+    Rotation is applied to every dimensions in an non-interleaved manner.
+
+    Paper: Roformer - https://arxiv.org/abs/2104.09864
+    """
+
     cos: Float[Array, "max_seq_len d_model//2"]
     sin: Float[Array, "mas_seq_len d_model//2"]
 
@@ -27,7 +33,7 @@ class RoPE(eqx.Module):
     def __call__(
         self, x: Float[Array, "seq_len d_model"]
     ) -> Float[Array, "seq_len d_model"]:
-        """Apply the rotary positional encoding."""
+        """Apply the rotary positional encoding to the given tokens."""
         seq_len = x.shape[0]
         x1, x2 = jnp.split(x, 2, axis=1)
 

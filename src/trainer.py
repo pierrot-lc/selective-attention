@@ -110,15 +110,30 @@ def train(
     model: DecoderTransformer,
     train_dataset: ShakespearDataset,
     test_dataset: ShakespearDataset,
+    learning_rate: float,
+    batch_size: int,
     n_training_iter: int,
     n_eval_iter: int,
-    batch_size: int,
     logger: Run,
     key: random.PRNGKey,
 ):
+    """Main training loop for the model.
+
+    ---
+    Args:
+        model: The model to train.
+        train_dataset: The dataset to train on.
+        test_dataset: The dataset to evaluate on.
+        learning_rate: The learning rate of the optimizer.
+        batch_size: The size of the batches.
+        n_training_iter: The number of training iterations.
+        n_eval_iter: The number of evaluation iterations used to estimate the metrics.
+        logger: The wandb logger.
+        key: The random key to use.
+    """
     grad_fn = jax.grad(loss_fn)
     params, static = eqx.partition(model, eqx.is_array)
-    optimizer = optax.adamw(1e-4)
+    optimizer = optax.adamw(learning_rate)
     opt_state = optimizer.init(params)
 
     n_params = count_params(model)
