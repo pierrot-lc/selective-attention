@@ -15,20 +15,29 @@ class DecoderLayer(eqx.Module):
     norm_1: nn.LayerNorm
     norm_2: nn.LayerNorm
 
-    def __init__(self, d_model: int, num_heads: int, mha_type: str, key: random.PRNGKey):
+    def __init__(
+        self,
+        d_model: int,
+        num_heads: int,
+        mha_type: str,
+        rope: bool,
+        key: random.PRNGKey,
+    ):
         super().__init__()
         assert d_model % num_heads == 0
 
         key, sk = random.split(key)
         match mha_type:
             case "selective":
-                self.mha = MultiheadSelectiveAttention(num_heads, d_model, key=sk)
+                self.mha = MultiheadSelectiveAttention(num_heads, d_model, rope, key=sk)
             case "normal":
-                self.mha = MultiheadAttention(num_heads, d_model, key=sk)
-            case _:
+                self.mha = MultiheadAttention(num_heads, d_model, rope, key=sk)
+            case "equinox":
                 self.mha = nn.MultiheadAttention(num_heads, d_model, key=sk)
+            case _:
+                raise ValueError(f"Unknown mha_type: {mha_type}")
 
-        key, sk_1, sk_2 = random.split(key, 3)
+        sk_1, sk_2 = random.split(key, 2)
         self.ffn = nn.Sequential(
             [
                 nn.Linear(d_model, d_model * 4, use_bias=False, key=sk_1),
@@ -67,6 +76,7 @@ class DecoderTransformer(eqx.Module):
         d_model: int,
         num_heads: int,
         mha_type: str,
+        rope: bool,
         num_layers: int,
         num_logits: int,
         key: random.PRNGKey,
@@ -76,9 +86,9 @@ class DecoderTransformer(eqx.Module):
         key, sk = random.split(key)
         self.embedding = nn.Embedding(num_embeddings, d_model, key=sk)
 
-        key, *subkeys = random.split(key, num_layers+1)
+        key, *subkeys = random.split(key, num_layers + 1)
         self.layers = nn.Sequential(
-            [DecoderLayer(d_model, num_heads, mha_type, sk) for sk in subkeys]
+            [DecoderLayer(d_model, num_heads, mha_type, rope, sk) for sk in subkeys]
         )
 
         self.logits = nn.Linear(d_model, num_logits, key=key)

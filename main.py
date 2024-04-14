@@ -36,6 +36,7 @@ def main(dict_config: DictConfig):
         config.model.d_model,
         config.model.num_heads,
         config.model.mha_type,
+        config.model.rope,
         config.model.num_layers,
         dataset.vocab_size,
         sk,

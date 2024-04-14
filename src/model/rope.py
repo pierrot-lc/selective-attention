@@ -31,8 +31,12 @@ class RoPE(eqx.Module):
         seq_len = x.shape[0]
         x1, x2 = jnp.split(x, 2, axis=1)
 
-        x1_rot = x1 * self.cos[:seq_len] - x2 * self.sin[:seq_len]
-        x2_rot = x1 * self.sin[:seq_len] + x2 * self.cos[:seq_len]
+        # Those are not trainable.
+        cos = jax.lax.stop_gradient(self.cos)
+        sin = jax.lax.stop_gradient(self.sin)
+
+        x1_rot = x1 * cos[:seq_len] - x2 * sin[:seq_len]
+        x2_rot = x1 * sin[:seq_len] + x2 * cos[:seq_len]
 
         x = jnp.concat((x1_rot, x2_rot), axis=1)
-        return jax.lax.stop_gradient(x)
+        return x

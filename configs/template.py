@@ -18,6 +18,7 @@ class DecoderTransformerConfig:
     d_model: int
     num_heads: int
     mha_type: str
+    rope: bool
     num_layers: int
 
 

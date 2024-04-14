@@ -18,7 +18,7 @@ def qkv_attention(
     q: Float[Array, "q_seq d_model"],
     k: Float[Array, "kv_seq d_model"],
     v: Float[Array, "kv_seq d_model"],
-    mask: Optional[Bool[Array, "q_seq kv_seq"]] = None,
+    mask: Bool[Array, "q_seq kv_seq"],
 ) -> Float[Array, "q_seq d_model"]:
     logits = jnp.einsum("ij,kj->ik", q, k)
     logits = logits / jnp.sqrt(k.shape[0])
@@ -35,7 +35,7 @@ def qkv_selective_attention(
     q: Float[Array, "q_seq d_model"],
     k: Float[Array, "q_seq kv_seq d_model"],
     v: Float[Array, "q_seq kv_seq d_model"],
-    mask: Optional[Bool[Array, "q_seq kv_seq"]] = None,
+    mask: Bool[Array, "q_seq kv_seq"],
 ) -> Float[Array, "q_seq d_model"]:
     q = rearrange(q, "s d -> s 1 d")
     mask = rearrange(mask, "s t -> s 1 t")
@@ -60,10 +60,10 @@ class MultiheadAttention(eqx.Module):
     project_q: nn.Linear
     project_k: nn.Linear
     project_v: nn.Linear
-    rope: RoPE
+    rope: Optional[RoPE]
     num_heads: int
 
-    def __init__(self, num_heads: int, d_model: int, key: random.PRNGKey):
+    def __init__(self, num_heads: int, d_model: int, rope: bool, key: random.PRNGKey):
         super().__init__()
         assert d_model % num_heads == 0
         self.num_heads = num_heads
@@ -73,7 +73,7 @@ class MultiheadAttention(eqx.Module):
         self.project_k = nn.Linear(d_model, d_model, use_bias=False, key=sk[1])
         self.project_v = nn.Linear(d_model, d_model, use_bias=False, key=sk[2])
 
-        self.rope = RoPE(d_model // num_heads, max_seq_len=10000)
+        self.rope = RoPE(d_model // num_heads, max_seq_len=10000) if rope else None
 
     @eqx.filter_jit
     @jaxtyped(typechecker=beartype)
@@ -94,10 +94,11 @@ class MultiheadAttention(eqx.Module):
         k_heads = rearrange(k, "s (n d) -> n s d", n=self.num_heads)
         v_heads = rearrange(v, "s (n d) -> n s d", n=self.num_heads)
 
-        # Apply RoPE.
-        rope = jax.vmap(self.rope)
-        q_heads = rope(q_heads)
-        k_heads = rope(k_heads)
+        if self.rope is not None:
+            # Apply RoPE.
+            rope = jax.vmap(self.rope)
+            q_heads = rope(q_heads)
+            k_heads = rope(k_heads)
 
         # Do not vmap the mask. The mask is the same accross all heads.
         multihead_qkv_attention = jax.vmap(qkv_attention, in_axes=(0, 0, 0, None))
@@ -110,10 +111,10 @@ class MultiheadSelectiveAttention(eqx.Module):
     project_q: nn.Linear
     project_k: nn.Linear
     project_v: nn.Linear
-    rope: RoPE
+    rope: Optional[RoPE]
     num_heads: int
 
-    def __init__(self, num_heads: int, d_model: int, key: random.PRNGKey):
+    def __init__(self, num_heads: int, d_model: int, rope: bool, key: random.PRNGKey):
         super().__init__()
         assert d_model % num_heads == 0
         self.num_heads = num_heads
@@ -123,7 +124,7 @@ class MultiheadSelectiveAttention(eqx.Module):
         self.project_k = nn.Linear(2 * d_model, d_model, use_bias=False, key=sk[1])
         self.project_v = nn.Linear(2 * d_model, d_model, use_bias=False, key=sk[2])
 
-        self.rope = RoPE(d_model // num_heads, max_seq_len=10000)
+        self.rope = RoPE(d_model // num_heads, max_seq_len=10000) if rope else None
 
     @eqx.filter_jit
     @jaxtyped(typechecker=beartype)
@@ -152,11 +153,12 @@ class MultiheadSelectiveAttention(eqx.Module):
         k_heads = rearrange(k, "s1 s2 (n d) -> n s1 s2 d", n=self.num_heads)
         v_heads = rearrange(v, "s1 s2 (n d) -> n s1 s2 d", n=self.num_heads)
 
-        # Apply RoPE.
-        rope = jax.vmap(self.rope)  # Multiple heads.
-        q_heads = rope(q_heads)
-        rope = jax.vmap(rope)  # Additional q_seq dimension.
-        k_heads = rope(k_heads)
+        if self.rope is not None:
+            # Apply RoPE.
+            rope = jax.vmap(self.rope)  # Multiple heads.
+            q_heads = rope(q_heads)
+            rope = jax.vmap(rope)  # Additional q_seq dimension.
+            k_heads = rope(k_heads)
 
         # Finally compute cubic attention.
         multihead_qkv_attention = jax.vmap(
