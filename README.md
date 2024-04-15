@@ -27,7 +27,7 @@ $$
 \text{Attention}(Q, K, V) = \text{softmax}\left(\frac{QK^T}{\sqrt{d_k}}\right)V
 $$
 
-Where $Q$ are the queries, $K$ is the keys, and $V$ is the values. The
+Where $Q$ are the queries, $K$ are the keys, and $V$ are the values. The
 selective attention is defined by:
 
 $$
@@ -36,7 +36,7 @@ $$
 
 Where $q_i$ is the $i$-th query, $K_i$ and $V_i$ are the keys and values for
 the $i$-th query. It effectively means that the keys and values are generated
-per-query.
+per-query. The final attention has to be computed for every queries $Q$.
 
 Now, one important detail is the way the keys and values are generated. I
 decided to go the simple way of concatenating the queries with the keys and
