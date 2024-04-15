@@ -38,7 +38,7 @@ class DecoderLayer(eqx.Module):
         match mha_type:
             case "selective":
                 self.mha = MultiheadSelectiveAttention(num_heads, d_model, rope, key=sk)
-            case "normal":
+            case "standard":
                 self.mha = MultiheadAttention(num_heads, d_model, rope, key=sk)
             case "equinox":
                 self.mha = nn.MultiheadAttention(num_heads, d_model, key=sk)
