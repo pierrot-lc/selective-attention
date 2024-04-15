@@ -1,6 +1,5 @@
 **/__pycache__
 .pdm-python
 .venv
-data/
 outputs/
 wandb/

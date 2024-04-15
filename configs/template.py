@@ -7,7 +7,7 @@ from hydra.utils import to_absolute_path
 @dataclass
 class ShakespearDatasetConfig:
     seq_len: int
-    filepath: Path = Path("./data/shakespear.txt")
+    filepath: Path = Path("./data/shakespeare.txt")
 
     def __post_init__(self):
         self.filepath = Path(to_absolute_path(str(self.filepath)))
