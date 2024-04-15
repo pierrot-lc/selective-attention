@@ -114,7 +114,7 @@ class DecoderTransformer(eqx.Module):
 
     @eqx.filter_jit
     @jaxtyped(typechecker=beartype)
-    def __call__(self, x: Int[Array, "seq_len"]) -> Float[Array, "seq_len d_model"]:
+    def __call__(self, x: Int[Array, " seq_len"]) -> Float[Array, "seq_len d_model"]:
         """Apply the decoder to the input sequence. The mask used is a causal mask."""
         mask = jnp.eye(x.shape[0], dtype=int)
         mask = jnp.cumsum(mask, axis=1).T

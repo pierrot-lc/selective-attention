@@ -59,7 +59,7 @@ def cross_product_matching(
     query: Float[Array, "q_seq q_size"], other: Float[Array, "o_seq o_size"]
 ) -> Float[Array, "q_seq o_seq q_size+o_size"]:
     """Concatenate every query element to every other element."""
-    cat = lambda v1, v2: jnp.concatenate((v1, v2), axis=0)
+    cat = lambda v1, v2: jnp.concatenate((v1, v2), axis=0)  # noqa: E731
     cat = jax.vmap(cat, in_axes=(None, 0))
     cat = jax.vmap(cat, in_axes=(0, None))
     return cat(query, other)

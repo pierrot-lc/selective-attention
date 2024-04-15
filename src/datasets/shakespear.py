@@ -16,7 +16,7 @@ class ShakespearDataset(eqx.Module):
     It does not use a complicated tokenization scheme, but a raw character-based encoding.
     """
     text: str
-    encoded_text: Int[Array, "total_characters"]
+    encoded_text: Int[Array, " total_characters"]
     uniq_chars: list[str]
     char_to_int: dict[str, int]
     int_to_char: dict[int, str]
@@ -40,7 +40,7 @@ class ShakespearDataset(eqx.Module):
         self.encoded_text = jnp.array(encoded_text)
 
     @jaxtyped(typechecker=beartype)
-    def __getitem__(self, i: Int[Array, ""]) -> Int[Array, "seq_len"]:
+    def __getitem__(self, i: Int[Array, ""]) -> Int[Array, " seq_len"]:
         """Return the ith sequence of tokens."""
         tokens = self.encoded_text[i : i + self.seq_len]
         return tokens
