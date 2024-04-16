@@ -75,6 +75,38 @@ The shapes are checked using `beartype` and `jaxtyping`.
 
 ## Experiments
 
+I have trained two models with the same hyperparameters (which you can find in
+`./configs/default.yaml`). The main difference between the two models is the
+training time, selective attention being **much slower** than the standard
+attention mechanism. The results are as follows:
+
+|                | standard | selective | equinox |
+|:--------------:|----------|-----------|---------|
+|      loss      | 1.475    | 1.448     | 1.632   |
+| top-1 accuracy | 0.543    | 0.554     | 0.504   |
+| training time  | 3h45     | 14h50     | 3h30    |
+| parameters     | 191,000  | 207,000   | 224,000 |
+
+Selective attention is slightly better but it may be explained solely by the
+number of parameters rather than the attention mechanism itself. Also, note
+that my `equinox` version does not use any positional encoding. That's why it
+performs so badly.
+
+To validate my own standard attention, I've compared a run with my
+implementation without RoPE with a run with the `equinox` implementation
+(without RoPE). The training runs are similar:
+
+|                | standard | equinox |
+|:--------------:|----------|---------|
+|      loss      | 1.645    | 1.632   |
+| top-1 accuracy | 0.499    | 0.504   |
+| training time  | 3h20     | 3h30    |
+| parameters     | 191,000  | 224,000 |
+
+All training curves:
+
+![training-curves](./.figs/training-curves.png)
+
 ## How to use
 
 ### Install the dependencies
