@@ -27,7 +27,7 @@ def qkv_attention(
     Paper: Attention is All You Need - https://arxiv.org/abs/1706.03762
     """
     logits = jnp.einsum("ij,kj->ik", q, k)  # Dot-product attention.
-    logits = logits / jnp.sqrt(k.shape[0])
+    logits = logits / jnp.sqrt(k.shape[1])
 
     attn_distrib = jax.nn.softmax(logits, axis=1, where=mask, initial=-jnp.inf)
     attn_result = jnp.einsum("ij,jk->ik", attn_distrib, v)  # Apply attention to v.
