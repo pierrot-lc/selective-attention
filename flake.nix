@@ -48,6 +48,8 @@
             just
             kaggle
             pdm
+            python311Packages.python-lsp-server
+            ruff-lsp
             wget
             zlib # Numpy dep.
           ]);
